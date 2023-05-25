@@ -1,0 +1,36 @@
+use crate::ast::{CallNode, Statement, ExpressionNode, LiteralNode};
+
+grammar;
+
+pub Statement: Statement = {
+	<e:Expression> ";" => Statement { expr: e }
+};
+
+Expression: ExpressionNode = {
+	<c:Call> => ExpressionNode::Call(c),
+	<l:Literal> => ExpressionNode::Literal(l)
+};
+
+Call: CallNode = {
+	<t:Identifier> "(" <a:Comma<Expression>> ")" => CallNode { target: t, arguments: a }
+}
+
+Literal: LiteralNode = {
+	<s:StringLiteral> => LiteralNode::String(s)
+};
+
+StringLiteral: String = <s:r#""(\\.|[^"])*""#> => s.to_string();
+
+Identifier: String = {
+	<i:r"\w+"> => i.to_string()
+};
+
+Comma<T>: Vec<T> = {
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
