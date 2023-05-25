@@ -1,14 +1,39 @@
-use crate::ast::{CallNode, Statement, ExpressionNode, LiteralNode};
+use crate::ast::*;
 
 grammar;
 
-pub Statement: Statement = {
+pub Ast: Ast = {
+	<m:Module> => Ast { root: m }
+};
+
+Module: Module = {
+	<f:Function*> => Module { functions: f },
+};
+
+Function: Function = {
+	"fn" <i:Identifier> "(" <p:Comma<Parameter>> ")" <b:Block> => Function {
+		name: i,
+		parameters: p,
+		body: b
+	}
+};
+
+Parameter: Parameter = {
+	<n:Identifier> ":" <t:Identifier> => Parameter { name: n, r#type: t }
+};
+
+Block: Block = {
+	"{" <s:Statement*> <e:Expression?> "}" => Block { stmts: s, expr: e.map(|e| Box::new(e)) }
+};
+
+Statement: Statement = {
 	<e:Expression> ";" => Statement { expr: e }
 };
 
 Expression: ExpressionNode = {
+	<b:Block> => ExpressionNode::Block(b),
 	<c:Call> => ExpressionNode::Call(c),
-	<l:Literal> => ExpressionNode::Literal(l)
+	<l:Literal> => ExpressionNode::Literal(l),
 };
 
 Call: CallNode = {
@@ -25,8 +50,20 @@ Identifier: String = {
 	<i:r"\w+"> => i.to_string()
 };
 
+// Can these be generified?
+
 Comma<T>: Vec<T> = {
     <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
+
+Semicolon<T>: Vec<T> = {
+    <mut v:(<T> ";")*> <e:T?> => match e {
         None => v,
         Some(e) => {
             v.push(e);
